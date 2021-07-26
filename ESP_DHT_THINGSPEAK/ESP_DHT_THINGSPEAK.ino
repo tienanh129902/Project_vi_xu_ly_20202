@@ -2,12 +2,13 @@
 #include <WiFi.h>
 #include <ThingSpeak.h>
 #include <Adafruit_Sensor.h>
+#include <LiquidCrystal_I2C.h>
 
 #define DHTPIN 4
 #define DHTTYPE DHT11
 DHT dht(DHTPIN, DHTTYPE);
 
-const char* ssid = "VNPT 2.4G";   // wifi SSID 
+const char* ssid = "VNPT 2.4G";   // wifi SSID
 const char* password = "hoilamgi";   // wifi password
 
 WiFiClient  client;
@@ -17,11 +18,17 @@ const char * myWriteAPIKey = "PTXT65EGKSUIP6QJ";
 unsigned long lastTime = 0;
 unsigned long timerDelay = 30000;
 float f, t, h;
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
   Serial.println(F("DHT11 test!"));
   WiFi.mode(WIFI_STA);
+  // initialize LCD
+  lcd.init();
+  // turn on LCD backlight
+  lcd.backlight();
   dht.begin();
   ThingSpeak.begin(client);
 }
@@ -64,7 +71,10 @@ void loop() {
     Serial.print(F("°C "));
     Serial.print(f);
     Serial.print(F("°F "));
-
+    lcd.setCursor(0, 0);
+    lcd.print("Temp: " + String(t) + " do C");
+    lcd.setCursor(0, 1);
+    lcd.print("Humid: " + String(h)+ "%");
     // set the fields with the values
     ThingSpeak.setField(1, t);
     ThingSpeak.setField(2, h);
@@ -76,9 +86,9 @@ void loop() {
       Serial.println("Channel update successful.");
     }
     else {
-      Serial.println("Problem updating channel. HTTP error code " + String(x));//if not post successfully 
+      Serial.println("Problem updating channel. HTTP error code " + String(x));//if not post successfully
     }
     lastTime = millis();
   }
-
+  
 }
