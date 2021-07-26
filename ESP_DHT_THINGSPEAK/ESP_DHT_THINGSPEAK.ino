@@ -7,8 +7,8 @@
 #define DHTTYPE DHT11
 DHT dht(DHTPIN, DHTTYPE);
 
-const char* ssid = "VNPT 2.4G";   // your network SSID (name)
-const char* password = "hoilamgi";   // your network password
+const char* ssid = "VNPT 2.4G";   // wifi SSID 
+const char* password = "hoilamgi";   // wifi password
 
 WiFiClient  client;
 
@@ -76,7 +76,7 @@ void loop() {
       Serial.println("Channel update successful.");
     }
     else {
-      Serial.println("Problem updating channel. HTTP error code " + String(x));
+      Serial.println("Problem updating channel. HTTP error code " + String(x));//if not post successfully 
     }
     lastTime = millis();
   }
