@@ -12,6 +12,7 @@
 #include <LiquidCrystal_I2C.h>
 #include <ThingSpeak.h>
 
+
 #define DHTTYPE DHT11
 #define load1 GPIO_NUM_25 // define pin connect to control load 
 #define load2 GPIO_NUM_26
@@ -29,16 +30,12 @@ const char* PARAM_HUMID = "inputHumid";
 const char* PARAM_OFFTEMP = "offsetTemp";
 const char* PARAM_OFFHUMID = "offsetHumid";
 
-unsigned long myChannelNumber = 3;
-const char * myWriteAPIKey = "EJPURNDLMI68ALOY";
+unsigned long myChannelNumber = 1;
+const char * myWriteAPIKey = "APE6PUJB2VAE8A6A";
 
 //
 WiFiClient  client;
 // Set Static IP address
-IPAddress local_IP(192, 168, 1, 99);//192.168.1.99
-// Set Gateway IP address
-IPAddress gateway(192, 168, 1, 1);
-IPAddress subnet(255, 255, 0, 0);
 
 DHT dht(DHTPIN, DHTTYPE);
 LiquidCrystal_I2C lcd(0x27, 16, 2);
@@ -64,7 +61,7 @@ byte degree_symbol[8] =
   0b00000
 };
 
-void notFound(AsyncWebServerRequest *request) {
+void notFoundCallback(AsyncWebServerRequest *request) {
   request->send(404, "text/plain", "Not found");
 }
 
@@ -142,10 +139,6 @@ void setup() {
   lcd.init();
   lcd.backlight();
   lcd.createChar(0, degree_symbol);
-  if (!WiFi.config(local_IP, gateway, subnet))
-  {
-    Serial.println("STA Failed to configure");
-  }
   WiFi.mode(WIFI_STA);
   if (WiFi.status() != WL_CONNECTED) {
     Serial.print("Attempting to connect");
@@ -178,22 +171,22 @@ void setup() {
   // Send a HTTP_GET request to <ESP_IP>/get?inputString=<inputMessage>
   server.on("/get", HTTP_GET, [] (AsyncWebServerRequest * request) {
     String inputMessage;
-    // GET inputTemp value on <ESP_IP>/get?inputString=<inputMessage>
+    // GET inputTemp value on <ESP_IP>/get?inputTemp=<inputMessage>
     if (request->hasParam(PARAM_TEMP)) {
       inputMessage = request->getParam(PARAM_TEMP)->value();
       writeFile(SPIFFS, "/inputTemp.txt", inputMessage.c_str());
     }
-    // GET inputHumid value on <ESP_IP>/get?inputInt=<inputMessage>
+    // GET inputHumid value on <ESP_IP>/get?inputHumid=<inputMessage>
     else if (request->hasParam(PARAM_HUMID)) {
       inputMessage = request->getParam(PARAM_HUMID)->value();
       writeFile(SPIFFS, "/inputHumid.txt", inputMessage.c_str());
     }
-    // GET offsetTemp value on <ESP_IP>/get?inputInt=<inputMessage>
+    // GET offsetTemp value on <ESP_IP>/get?offsetTemp=<inputMessage>
     else if (request->hasParam(PARAM_OFFTEMP)) {
       inputMessage = request->getParam(PARAM_OFFTEMP)->value();
       writeFile(SPIFFS, "/offsetTemp.txt", inputMessage.c_str());
     }
-    // GET inputHumid value on <ESP_IP>/get?inputInt=<inputMessage>
+    // GET offsetHumid value on <ESP_IP>/get?offsetHumid=<inputMessage>
     else if (request->hasParam(PARAM_OFFHUMID)) {
       inputMessage = request->getParam(PARAM_OFFHUMID)->value();
       writeFile(SPIFFS, "/offsetHumid.txt", inputMessage.c_str());
@@ -204,20 +197,13 @@ void setup() {
     Serial.println(inputMessage);
     request->send(200, "text/text", inputMessage);
   });
-  server.onNotFound(notFound);
+  server.onNotFound(notFoundCallback);
   server.begin();
-  ThingSpeak.begin(client);
   dht.begin();
+  ThingSpeak.begin(client);
 }
 bool state = 0;
 void loop() {
-  if (millis() - currentTime > 1000)
-  {
-    currentTime = millis();
-    state = !state;
-    digitalWrite(load3, state);
-    Serial.println(currentTime);
-  }
   if ((millis() - lastTime) > timerDelay) {
     // Wait a few seconds between measurements.
     delay(2000);

@@ -1,0 +1,188 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <title>ESP32 Webserver</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css"
+    integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.3/socket.io.js"></script>
+</head>
+<div class="topnav">
+  <h3>ESP32 DASHBOARD</h3>
+</div><br>
+<div class="graph-container">
+  <iframe width="450" height="260" style="border: 1px solid #cccccc;"
+    src="https://thingspeak.com/channels/1510378/charts/1?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&type=line&update=15"></iframe>
+  <iframe width="450" height="260" style="border: 1px solid #cccccc;"
+    src="https://thingspeak.com/channels/1510378/charts/2?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&type=line&update=15"></iframe>
+</div>
+<style>
+  html {
+    font-family: Arial;
+    display: inline-block;
+    text-align: center;
+  }
+
+  p {
+    font-size: 1.2rem;
+  }
+
+  body {
+    margin: 0;
+  }
+
+  .topnav {
+    overflow: hidden;
+    background-color: #2f4468;
+    color: white;
+    font-size: 1.7rem;
+  }
+
+  .content {
+    padding: 20px;
+  }
+
+  .card {
+    background-color: white;
+    box-shadow: 2px 2px 12px 1px rgba(140, 140, 140, .5);
+  }
+
+  .cards {
+    max-width: 700px;
+    margin: 0 auto;
+    display: grid;
+    grid-gap: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+
+  .reading {
+    font-size: 2.8rem;
+  }
+
+  .packet {
+    color: #bebebe;
+  }
+
+  .card.temperature {
+    color: #fd7e14;
+  }
+
+  .card.humidity {
+    color: #1b78e2;
+  }
+</style>
+
+<body>
+  </div>
+  <div class="content">
+    <div class="cards">
+      <div class="card temperature">
+        <h4><i class="fas fa-thermometer-half"></i> TEMPERATURE</h4>
+        <p><span class="reading"><span id="temperature">%TEMPERATURE%</span> &deg;C</span></p>
+        <p class="packet">PROJECT 20202<span id="rt1"></span></p>
+      </div>
+      <div class="card humidity">
+        <h4><i class="fas fa-tint"></i> HUMIDITY</h4>
+        <p><span class="reading"><span id="humidity">%HUMIDITY%</span> &percnt;</span></p>
+        <p class="packet">PROJECT 20202<span id="rh1"></span></p>
+      </div>
+    </div>
+  </div>
+  <br>
+  <div class="form-container">
+    <form id="form-limit-humid" action="/get" target="hidden-form">
+      Limit Humidity: <input type="text " id="inputHumid" name="inputHumid">
+      <input type="submit" value="Submit" onclick="submitMessage()">
+    </form><br>
+    <form id="form-limit-temp" action="/get" target="hidden-form">
+      Limit Temperature: <input type="text" id="inputTemp" name="inputTemp">
+      <input type="submit" value="Submit" onclick="submitMessage()">
+    </form><br>
+    <form id="form-offset-temp" action="/get" target="hidden-form">
+      Offset Temperature: <input type="text " id="offsetTemp" name="offsetTemp">
+      <input type="submit" value="Submit" onclick="submitMessage()">
+    </form><br>
+    <form id="form-offset-humid" action="/get" target="hidden-form">
+      Offset Humidity: <input type="text " id="offsetHumid" name="offsetHumid">
+      <input type="submit" value="Submit" onclick="submitMessage()">
+    </form><br>
+    <iframe style="display:none" name="hidden-form"></iframe><br>
+  </div>
+
+  <script>
+    let socket = io.connect('http://13.228.25.43:3003')
+    let humidityNow;
+    let temperatureNow;
+
+    const submitMessage = () => {
+      alert("Saved value to ESP SPI Flash File System");
+      // setTimeout(function () { document.location.reload(false); }, 500);
+    }
+
+    const getDataHumidity = () => {
+      let xhttp = new XMLHttpRequest();
+      xhttp.onreadystatechange = function () {
+        if (this.readyState == 4 && this.status == 200) {
+          humidityNow = this.responseText
+          document.getElementById("humidity").innerHTML = humidityNow;
+        }
+      };
+      xhttp.open("GET", "/humidity", true);
+      xhttp.send();
+    }
+
+    const getDataTemperature = () => {
+      let xhttp = new XMLHttpRequest();
+      xhttp.onreadystatechange = function () {
+        if (this.readyState == 4 && this.status == 200) {
+          temperatureNow = this.responseText
+          document.getElementById("temperature").innerHTML = temperatureNow;
+        }
+      };
+      xhttp.open("GET", "/temperature", true);
+      xhttp.send();
+    }
+
+    const getRandom = (a, b) => {
+      return a + (b - a) * Math.random()
+    }
+
+    const start = async () => {
+      await socket.emit('source', 'processor')
+      socket.on('monitor_parameter', (package) => {
+        console.log('Monitor parameter change: ', package);
+        if (package.limit_temp) {
+          document.getElementById("inputTemp").value = package.limit_temp;
+          document.getElementById("form-limit-temp").submit();
+        }
+        if (package.limit_humid) {
+          document.getElementById("inputHumid").value = package.limit_humid;
+          document.getElementById("form-limit-humid").submit();
+        }
+        if (package.offset_temp) {
+          document.getElementById("offsetTemp").value = package.offset_temp;
+          document.getElementById("form-offset-temp").submit();
+        }
+        if (package.offset_humid) {
+          document.getElementById("offsetHumid").value = package.offset_humid;
+          document.getElementById("form-offset-humid").submit();
+        }
+      })
+      setInterval(async () => {
+        await getDataHumidity();
+        await getDataTemperature();
+        const package = {
+          time: new Date(),
+          humidity: humidityNow,
+          temperature: temperatureNow
+        }
+        await socket.emit('measurement_result', package)
+      }, 10000);
+    }
+
+    start()
+  </script>
+</body>
+
+</html>
